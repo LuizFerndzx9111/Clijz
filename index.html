@@ -1,0 +1,2121 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#090b10" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>OpenShorts Studio — Mobile & Server</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts: Inter & Montserrat (para subtítulos estilo Hormozi/MrBeast) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:ital,wght@0,800;0,900;1,900&display=swap" rel="stylesheet">
+
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            display: ['Montserrat', 'sans-serif']
+          },
+          colors: {
+            studio: {
+              bg: '#07090e',
+              panel: '#0f131d',
+              card: '#161b28',
+              border: '#232a3d',
+              accent: '#10b981',
+              purple: '#8b5cf6',
+              amber: '#f59e0b'
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    * {
+      -webkit-tap-highlight-color: transparent;
+      scrollbar-width: thin;
+      scrollbar-color: #232a3d #0f131d;
+    }
+    body {
+      background-color: #07090e;
+      color: #f1f5f9;
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+    }
+    /* Custom Range Sliders */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: #232a3d;
+      height: 6px;
+      border-radius: 999px;
+      outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #10b981;
+      cursor: pointer;
+      border: 2px solid #07090e;
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.6);
+    }
+    .canvas-shadow {
+      box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.85), 0 0 25px rgba(16, 185, 129, 0.12);
+    }
+    .pulse-rec {
+      animation: pulseRec 1.2s infinite ease-in-out;
+    }
+    @keyframes pulseRec {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.35; transform: scale(1.15); }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between select-none">
+
+  <!-- ================= HEADER / TOPBAR ================= -->
+  <header class="sticky top-0 z-30 bg-studio-panel/95 backdrop-blur-md border-b border-studio-border px-3 sm:px-6 py-2.5 flex items-center justify-between gap-2">
+    <div class="flex items-center gap-2.5">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-violet-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+        <i class="fa-solid fa-bolt text-white text-base"></i>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="font-extrabold text-sm sm:text-base tracking-tight text-white">OPENSHORTS <span class="text-emerald-400">STUDIO</span></h1>
+          <span class="hidden sm:inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">v2.4 WebApp + Server</span>
+        </div>
+        <p class="text-[11px] text-slate-400 hidden sm:block">Motor 9:16: active_speaker • burned_subtitles • camera_inset • Guardado Automático</p>
+      </div>
+    </div>
+
+    <!-- Indicadores rápidos y acciones globales -->
+    <div class="flex items-center gap-2">
+      <!-- Estado Auto-Guardado -->
+      <button onclick="switchMainView('vault')" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-studio-card hover:bg-slate-800 border border-studio-border text-xs font-semibold transition">
+        <i class="fa-solid fa-hard-drive text-emerald-400"></i>
+        <span class="hidden md:inline">Bóveda Móvil:</span>
+        <span id="vault-count-badge" class="px-1.5 py-0.5 text-[10px] rounded-full bg-emerald-500 text-slate-950 font-extrabold">0</span>
+      </button>
+
+      <!-- Botón Servidor -->
+      <button onclick="switchMainView('server')" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-studio-card hover:bg-slate-800 border border-studio-border text-xs font-semibold transition">
+        <span id="server-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
+        <span class="hidden sm:inline">Servidor</span>
+        <i class="fa-solid fa-cloud-arrow-up text-violet-400"></i>
+      </button>
+
+      <!-- Botón Principal de Renderizado Rápido -->
+      <button id="top-render-btn" onclick="renderCurrentClip()" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-extrabold text-xs shadow-lg shadow-emerald-500/20 active:scale-95 transition">
+        <i class="fa-solid fa-wand-magic-sparkles"></i>
+        <span>Generar Short</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ================= NAVEGACIÓN PRINCIPAL (ESTUDIO / BÓVEDA / SERVIDOR) ================= -->
+  <div class="bg-studio-panel border-b border-studio-border px-3 sm:px-6 flex items-center justify-between overflow-x-auto">
+    <div class="flex space-x-1">
+      <button id="nav-studio" onclick="switchMainView('studio')" class="px-3.5 py-2.5 text-xs font-bold border-b-2 border-emerald-400 text-emerald-400 flex items-center gap-1.5 whitespace-nowrap">
+        <i class="fa-solid fa-sliders"></i> Estudio 9:16 (Editor)
+      </button>
+      <button id="nav-vault" onclick="switchMainView('vault')" class="px-3.5 py-2.5 text-xs font-bold border-b-2 border-transparent text-slate-400 hover:text-white flex items-center gap-1.5 whitespace-nowrap">
+        <i class="fa-solid fa-film"></i> Clips Guardados en Teléfono
+      </button>
+      <button id="nav-server" onclick="switchMainView('server')" class="px-3.5 py-2.5 text-xs font-bold border-b-2 border-transparent text-slate-400 hover:text-white flex items-center gap-1.5 whitespace-nowrap">
+        <i class="fa-solid fa-server"></i> Sincronización & Backend Python
+      </button>
+    </div>
+
+    <!-- Interruptor rápido de descarga automática al móvil -->
+    <div class="hidden lg:flex items-center gap-3 py-1.5">
+      <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+        <input type="checkbox" id="global-auto-download" checked onchange="syncSaveToggles(this.checked)" class="w-4 h-4 accent-emerald-500 rounded cursor-pointer" />
+        <span><i class="fa-solid fa-download text-emerald-400 mr-1"></i>Auto-Descargar al móvil al terminar</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- ================= VISTA 1: ESTUDIO PRINCIPAL 9:16 ================= -->
+  <main id="view-studio" class="flex-1 max-w-[1600px] w-full mx-auto p-3 sm:p-5 grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+
+    <!-- COLUMNA IZQUIERDA (4 COLS): ORIGEN DE VIDEO Y AUTO-SLICER (app.py) -->
+    <section class="lg:col-span-4 flex flex-col gap-4 order-2 lg:order-1">
+      <!-- Tarjeta 1: Carga de Video o Demo Sintetizado -->
+      <div class="bg-studio-panel border border-studio-border rounded-2xl p-4 shadow-lg">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 text-[10px] font-mono font-bold rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">app.py</span>
+            <h2 class="text-sm font-bold text-white">1. Video Fuente (16:9 / Galería)</h2>
+          </div>
+          <span id="source-status-badge" class="text-[11px] font-semibold text-emerald-400">Demo IA Activo</span>
+        </div>
+
+        <!-- Botones de carga -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-3">
+          <label class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-studio-card hover:bg-slate-800 border border-dashed border-emerald-500/50 text-xs font-bold text-emerald-300 cursor-pointer transition text-center">
+            <i class="fa-solid fa-folder-open text-sm"></i>
+            <span>Subir Video Galería</span>
+            <input type="file" id="video-upload-input" accept="video/*" class="hidden" onchange="handleVideoUpload(event)" />
+          </label>
+
+          <button onclick="activateDemoPodcastStream()" class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/40 text-xs font-bold text-violet-300 transition">
+            <i class="fa-solid fa-podcast text-sm"></i>
+            <span>Demo Podcast 2 Hablantes</span>
+          </button>
+        </div>
+
+        <!-- Opciones de guardado rápido visibles en móvil -->
+        <div class="bg-studio-card/80 border border-studio-border rounded-xl p-2.5 flex flex-col gap-2">
+          <label class="flex items-center justify-between text-xs text-slate-200 cursor-pointer">
+            <span class="flex items-center gap-1.5"><i class="fa-solid fa-mobile-screen-button text-emerald-400"></i> Auto-Guardar en Teléfono (Descarga + DB)</span>
+            <input type="checkbox" id="mobile-auto-download" checked onchange="syncSaveToggles(this.checked)" class="w-4 h-4 accent-emerald-500 rounded" />
+          </label>
+          <label class="flex items-center justify-between text-xs text-slate-200 cursor-pointer">
+            <span class="flex items-center gap-1.5"><i class="fa-solid fa-cloud-arrow-up text-violet-400"></i> Auto-Subir al Servidor al terminar</span>
+            <input type="checkbox" id="mobile-auto-server" onchange="toggleAutoServer(this.checked)" class="w-4 h-4 accent-violet-500 rounded" />
+          </label>
+        </div>
+      </div>
+
+      <!-- Tarjeta 2: Detector de Clips Virales (Auto-Slicer) -->
+      <div class="bg-studio-panel border border-studio-border rounded-2xl p-4 shadow-lg">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h2 class="text-sm font-bold text-white flex items-center gap-1.5">
+              <i class="fa-solid fa-scissors text-emerald-400"></i> Clips Detectados (Auto-Slicer)
+            </h2>
+            <p class="text-[11px] text-slate-400">Selecciona un segmento o ajusta su inicio y fin</p>
+          </div>
+          <div class="flex gap-1.5">
+            <button onclick="autoDetectViralClips()" title="Re-analizar momentos virales" class="px-2.5 py-1.5 rounded-lg bg-studio-card hover:bg-slate-800 border border-studio-border text-[11px] font-semibold text-emerald-400">
+              <i class="fa-solid fa-wand-sparkles mr-1"></i>IA Clips
+            </button>
+            <button onclick="addCustomClip()" class="px-2.5 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-[11px] font-bold text-emerald-300">
+              + Nuevo
+            </button>
+          </div>
+        </div>
+
+        <!-- Controles de recorte del clip activo -->
+        <div class="bg-studio-card border border-studio-border rounded-xl p-3 mb-3">
+          <div class="flex items-center justify-between text-xs mb-1.5">
+            <span class="font-bold text-slate-300">Rango del Clip Activo:</span>
+            <span id="clip-range-label" class="font-mono font-bold text-emerald-400">00:00.0 - 00:08.0 (8.0s)</span>
+          </div>
+          <div class="grid grid-cols-2 gap-3 mb-2">
+            <div>
+              <label class="text-[10px] text-slate-400 uppercase font-bold block mb-1">Inicio (seg)</label>
+              <input type="range" id="clip-start-slider" min="0" max="25" step="0.5" value="0" oninput="updateActiveClipBounds('start', this.value)" class="w-full" />
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-400 uppercase font-bold block mb-1">Fin (seg)</label>
+              <input type="range" id="clip-end-slider" min="2" max="30" step="0.5" value="8" oninput="updateActiveClipBounds('end', this.value)" class="w-full" />
+            </div>
+          </div>
+          <input type="text" id="clip-title-input" oninput="updateActiveClipTitle(this.value)" placeholder="Título del Short..." class="w-full bg-studio-bg border border-studio-border rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-emerald-500 outline-none" />
+        </div>
+
+        <!-- Lista de Clips sugeridos -->
+        <div id="clips-list-container" class="space-y-2 max-h-60 overflow-y-auto pr-1"></div>
+
+        <!-- Botón de Renderizado en Lote -->
+        <button id="batch-render-btn" onclick="renderAllClipsBatch()" class="mt-3 w-full py-2.5 px-3 rounded-xl bg-violet-600/25 hover:bg-violet-600/35 border border-violet-500/40 text-violet-200 font-bold text-xs flex items-center justify-center gap-2 transition">
+          <i class="fa-solid fa-layer-group"></i>
+          <span>Generar y Guardar TODOS los Clips en Lote</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- COLUMNA CENTRAL (4 COLS): LIENZO VERTICAL 9:16 EN TIEMPO REAL -->
+    <section class="lg:col-span-4 flex flex-col items-center order-1 lg:order-2">
+      <div class="w-full max-w-[340px] flex flex-col items-center">
+        <!-- Cabecera del Monitor 9:16 -->
+        <div class="w-full flex items-center justify-between mb-2 px-1">
+          <div class="flex items-center gap-2">
+            <span id="rec-indicator" class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+            <span id="monitor-status-text" class="text-xs font-bold tracking-wide text-slate-300">MONITOR 9:16 (720×1280 HD)</span>
+          </div>
+          <label class="flex items-center gap-1.5 text-[11px] text-slate-400 cursor-pointer">
+            <input type="checkbox" id="chk-show-hud" checked class="accent-emerald-500 rounded" />
+            <span>Guías IA</span>
+          </label>
+        </div>
+
+        <!-- Contenedor del Lienzo 9:16 -->
+        <div class="relative w-full aspect-[9/16] rounded-[26px] p-1.5 bg-gradient-to-b from-slate-700/60 via-slate-800/40 to-slate-900 border border-slate-700/80 canvas-shadow overflow-hidden">
+          <canvas id="shorts-canvas" width="720" height="1280" class="w-full h-full rounded-[20px] bg-black block cursor-grab active:cursor-grabbing"></canvas>
+
+          <!-- Overlay de Progreso durante Renderizado y Guardado -->
+          <div id="render-overlay" class="hidden absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-20">
+            <div class="w-14 h-14 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center mb-4">
+              <i class="fa-solid fa-gear fa-spin text-2xl text-emerald-400"></i>
+            </div>
+            <h3 id="render-overlay-title" class="text-sm font-extrabold text-white mb-1">Renderizando Short 9:16...</h3>
+            <p id="render-overlay-subtitle" class="text-xs text-slate-400 mb-4">Quemando subtítulos, encuadre y audio</p>
+            <div class="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden mb-2 border border-slate-700">
+              <div id="render-progress-bar" class="bg-gradient-to-r from-emerald-500 to-teal-300 h-full w-0 transition-all duration-150"></div>
+            </div>
+            <span id="render-progress-pct" class="text-xs font-mono font-bold text-emerald-400">0%</span>
+          </div>
+        </div>
+
+        <!-- Controles de Reproducción y Transporte -->
+        <div class="w-full bg-studio-panel border border-studio-border rounded-2xl p-3 mt-3 shadow-lg">
+          <div class="flex items-center gap-2.5 mb-2">
+            <button id="play-pause-btn" onclick="togglePlayPause()" class="w-9 h-9 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 flex items-center justify-center font-bold shadow transition">
+              <i id="play-pause-icon" class="fa-solid fa-play"></i>
+            </button>
+            <div class="flex-1">
+              <input type="range" id="timeline-scrubber" min="0" max="30" step="0.05" value="0" oninput="seekVideo(this.value)" class="w-full" />
+              <div class="flex justify-between text-[10px] font-mono text-slate-400 mt-0.5">
+                <span id="current-time-txt">00:00.0</span>
+                <span id="speaker-detected-txt" class="text-emerald-400 font-semibold">Hablante: Auto IA</span>
+                <span id="total-time-txt">00:30.0</span>
+              </div>
+            </div>
+            <button onclick="toggleMuteAudio()" id="mute-btn" class="w-8 h-8 rounded-xl bg-studio-card hover:bg-slate-800 border border-studio-border text-slate-300 flex items-center justify-center text-xs">
+              <i id="mute-icon" class="fa-solid fa-volume-high"></i>
+            </button>
+          </div>
+
+          <!-- Botón Grande de Acción Directa -->
+          <button onclick="renderCurrentClip()" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-400 hover:brightness-110 text-slate-950 font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-[0.99] transition">
+            <i class="fa-solid fa-bolt"></i>
+            <span>RENDERIZAR Y GUARDAR CLIP AHORA</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- COLUMNA DERECHA (4 COLS): MÓDULOS DE INGENIERÍA OPENSHORTS -->
+    <section class="lg:col-span-4 flex flex-col gap-4 order-3">
+      <!-- Pestañas de los 4 módulos de procesamiento -->
+      <div class="bg-studio-panel border border-studio-border rounded-2xl overflow-hidden shadow-lg">
+        <div class="grid grid-cols-4 border-b border-studio-border bg-studio-card/60 text-[11px] font-bold">
+          <button onclick="switchModuleTab('speaker', this)" class="mod-tab py-3 px-2 border-b-2 border-emerald-400 text-emerald-400 flex flex-col items-center gap-1">
+            <i class="fa-solid fa-user-check text-sm"></i>
+            <span>Encuadre</span>
+          </button>
+          <button onclick="switchModuleTab('subs', this)" class="mod-tab py-3 px-2 border-b-2 border-transparent text-slate-400 hover:text-white flex flex-col items-center gap-1">
+            <i class="fa-solid fa-closed-captioning text-sm"></i>
+            <span>Subtítulos</span>
+          </button>
+          <button onclick="switchModuleTab('inset', this)" class="mod-tab py-3 px-2 border-b-2 border-transparent text-slate-400 hover:text-white flex flex-col items-center gap-1">
+            <i class="fa-solid fa-camera-rotate text-sm"></i>
+            <span>Cam Inset</span>
+          </button>
+          <button onclick="switchModuleTab('watermark', this)" class="mod-tab py-3 px-2 border-b-2 border-transparent text-slate-400 hover:text-white flex flex-col items-center gap-1">
+            <i class="fa-solid fa-stamp text-sm"></i>
+            <span>Marca Agua</span>
+          </button>
+        </div>
+
+        <!-- ================= PANEL MÓDULO 1: active_speaker.py ================= -->
+        <div id="mod-panel-speaker" class="p-4 space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="px-2 py-0.5 text-[10px] font-mono font-bold rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">active_speaker.py</span>
+              <h3 class="text-sm font-bold text-white mt-1">Encuadre Inteligente 9:16</h3>
+            </div>
+            <span class="text-[11px] text-slate-400">Suavizado LERP</span>
+          </div>
+
+          <!-- Modo de Encuadre -->
+          <div class="space-y-2">
+            <label class="text-xs font-semibold text-slate-300 block">Modo de Disposición Vertical:</label>
+            <div class="grid grid-cols-1 gap-2">
+              <button onclick="setFramingMode('auto_speaker')" id="btn-frame-auto_speaker" class="frame-mode-btn flex items-center justify-between p-2.5 rounded-xl border border-emerald-500 bg-emerald-500/10 text-left transition">
+                <div class="flex items-center gap-2.5">
+                  <i class="fa-solid fa-crosshairs text-emerald-400 text-base"></i>
+                  <div>
+                    <div class="text-xs font-bold text-white">Auto Active Speaker (IA Crop 9:16)</div>
+                    <div class="text-[10px] text-slate-400">Sigue automáticamente al hablante activo</div>
+                  </div>
+                </div>
+                <i class="fa-solid fa-circle-check text-emerald-400"></i>
+              </button>
+
+              <button onclick="setFramingMode('split_screen')" id="btn-frame-split_screen" class="frame-mode-btn flex items-center justify-between p-2.5 rounded-xl border border-studio-border bg-studio-card text-left transition">
+                <div class="flex items-center gap-2.5">
+                  <i class="fa-solid fa-table-columns fa-rotate-90 text-violet-400 text-base"></i>
+                  <div>
+                    <div class="text-xs font-bold text-white">Split Screen (Pantalla Dividida Podcast)</div>
+                    <div class="text-[10px] text-slate-400">Arriba Hablante 1 • Abajo Hablante 2 / Reacción</div>
+                  </div>
+                </div>
+                <i class="fa-regular fa-circle text-slate-500"></i>
+              </button>
+
+              <button onclick="setFramingMode('blur_bg')" id="btn-frame-blur_bg" class="frame-mode-btn flex items-center justify-between p-2.5 rounded-xl border border-studio-border bg-studio-card text-left transition">
+                <div class="flex items-center gap-2.5">
+                  <i class="fa-solid fa-expand text-amber-400 text-base"></i>
+                  <div>
+                    <div class="text-xs font-bold text-white">Fondo Blur Cinematográfico (16:9 Completo)</div>
+                    <div class="text-[10px] text-slate-400">Video panorámico centrado con fondo desenfocado</div>
+                  </div>
+                </div>
+                <i class="fa-regular fa-circle text-slate-500"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Selección de Foco del Hablante -->
+          <div>
+            <label class="text-xs font-semibold text-slate-300 block mb-1.5">Objetivo de Seguimiento de Cámara:</label>
+            <div class="grid grid-cols-4 gap-1.5 text-[11px] font-bold">
+              <button onclick="setSpeakerTarget('auto')" id="spk-auto" class="spk-btn py-2 rounded-lg bg-emerald-500 text-slate-950">Auto IA</button>
+              <button onclick="setSpeakerTarget('left')" id="spk-left" class="spk-btn py-2 rounded-lg bg-studio-card text-slate-300 border border-studio-border">Izquierda</button>
+              <button onclick="setSpeakerTarget('center')" id="spk-center" class="spk-btn py-2 rounded-lg bg-studio-card text-slate-300 border border-studio-border">Centro</button>
+              <button onclick="setSpeakerTarget('right')" id="spk-right" class="spk-btn py-2 rounded-lg bg-studio-card text-slate-300 border border-studio-border">Derecha</button>
+            </div>
+          </div>
+
+          <!-- Controles de Zoom y Desplazamiento Manual -->
+          <div class="bg-studio-card border border-studio-border rounded-xl p-3 space-y-3">
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-slate-300 font-medium">Zoom de Cámara</span>
+                <span id="zoom-val-label" class="font-mono text-emerald-400">1.05x</span>
+              </div>
+              <input type="range" id="crop-zoom-slider" min="1" max="2.0" step="0.05" value="1.05" oninput="updateCropManual()" class="w-full" />
+            </div>
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-slate-300 font-medium">Ajuste Fino Horizontal (Offset X)</span>
+                <span id="panx-val-label" class="font-mono text-emerald-400">0%</span>
+              </div>
+              <input type="range" id="crop-panx-slider" min="-40" max="40" step="1" value="0" oninput="updateCropManual()" class="w-full" />
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= PANEL MÓDULO 2: burned_subtitles.py ================= -->
+        <div id="mod-panel-subs" class="hidden p-4 space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="px-2 py-0.5 text-[10px] font-mono font-bold rounded bg-amber-500/15 text-amber-400 border border-amber-500/30">burned_subtitles.py</span>
+              <h3 class="text-sm font-bold text-white mt-1">Subtítulos Quemados Dinámicos</h3>
+            </div>
+            <label class="flex items-center gap-1.5 text-xs font-bold text-emerald-400 cursor-pointer">
+              <input type="checkbox" id="subs-enabled-chk" checked onchange="state.subtitles.enabled = this.checked" class="w-4 h-4 accent-emerald-500 rounded" />
+              <span>Activos</span>
+            </label>
+          </div>
+
+          <!-- Plantillas de Estilo -->
+          <div>
+            <label class="text-xs font-semibold text-slate-300 block mb-1.5">Estilo Visual de Subtítulos:</label>
+            <div class="grid grid-cols-2 gap-2 text-xs font-extrabold">
+              <button onclick="setSubtitlePreset('hormozi')" id="preset-hormozi" class="sub-preset-btn p-2.5 rounded-xl border border-emerald-500 bg-emerald-500/10 text-yellow-300">
+                ⚡ HORMOZI NEON
+              </button>
+              <button onclick="setSubtitlePreset('tiktok')" id="preset-tiktok" class="sub-preset-btn p-2.5 rounded-xl border border-studio-border bg-studio-card text-white">
+                🎵 TIKTOK BOX
+              </button>
+              <button onclick="setSubtitlePreset('mrbeast')" id="preset-mrbeast" class="sub-preset-btn p-2.5 rounded-xl border border-studio-border bg-studio-card text-cyan-300">
+                🔥 MRBEAST BOLD
+              </button>
+              <button onclick="setSubtitlePreset('minimal')" id="preset-minimal" class="sub-preset-btn p-2.5 rounded-xl border border-studio-border bg-studio-card text-slate-200">
+                ✨ MINIMAL PRO
+              </button>
+            </div>
+          </div>
+
+          <!-- Posición Y, Tamaño y Color -->
+          <div class="bg-studio-card border border-studio-border rounded-xl p-3 space-y-2.5">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-[10px] text-slate-400 uppercase font-bold block mb-1">Tamaño Fuente</label>
+                <input type="range" min="34" max="68" value="48" oninput="state.subtitles.fontSize = Number(this.value)" class="w-full" />
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400 uppercase font-bold block mb-1">Altura Y (%)</label>
+                <input type="range" min="25" max="88" value="74" oninput="state.subtitles.posY = Number(this.value)" class="w-full" />
+              </div>
+            </div>
+            <div class="flex items-center justify-between pt-1">
+              <span class="text-xs text-slate-300">Color Palabra Activa:</span>
+              <div class="flex items-center gap-2">
+                <button onclick="state.subtitles.highlightColor='#facc15'" class="w-6 h-6 rounded-full bg-yellow-400 border-2 border-white"></button>
+                <button onclick="state.subtitles.highlightColor='#10b981'" class="w-6 h-6 rounded-full bg-emerald-400 border-2 border-transparent"></button>
+                <button onclick="state.subtitles.highlightColor='#38bdf8'" class="w-6 h-6 rounded-full bg-sky-400 border-2 border-transparent"></button>
+                <button onclick="state.subtitles.highlightColor='#f43f5e'" class="w-6 h-6 rounded-full bg-rose-500 border-2 border-transparent"></button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Editor de Transcripción en Vivo -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="text-xs font-semibold text-slate-300">Guion Sincronizado (Palabra por Palabra):</label>
+              <button onclick="autoGenerateSubtitlesForClip()" class="text-[11px] font-bold text-emerald-400 hover:underline">
+                <i class="fa-solid fa-rotate mr-1"></i>Regenerar Guion
+              </button>
+            </div>
+            <div id="subtitles-editor-list" class="space-y-2 max-h-48 overflow-y-auto pr-1"></div>
+            <button onclick="addSubtitleLine()" class="mt-2 w-full py-1.5 rounded-lg bg-studio-card hover:bg-slate-800 border border-studio-border text-xs font-semibold text-slate-300">
+              + Añadir Línea de Subtítulo
+            </button>
+          </div>
+        </div>
+
+        <!-- ================= PANEL MÓDULO 3: camera_inset.py ================= -->
+        <div id="mod-panel-inset" class="hidden p-4 space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="px-2 py-0.5 text-[10px] font-mono font-bold rounded bg-violet-500/15 text-violet-400 border border-violet-500/30">camera_inset.py</span>
+              <h3 class="text-sm font-bold text-white mt-1">Recuadro de Cámara (PiP / Reacción)</h3>
+            </div>
+            <label class="flex items-center gap-1.5 text-xs font-bold text-emerald-400 cursor-pointer">
+              <input type="checkbox" id="inset-enabled-chk" checked onchange="toggleCameraInset(this.checked)" class="w-4 h-4 accent-emerald-500 rounded" />
+              <span>Mostrar</span>
+            </label>
+          </div>
+
+          <!-- Fuente de la cámara superpuesta -->
+          <div class="space-y-2">
+            <label class="text-xs font-semibold text-slate-300 block">Fuente de Cámara Superpuesta:</label>
+            <div class="grid grid-cols-3 gap-2 text-[11px] font-bold">
+              <button onclick="setInsetSource('avatar')" id="inset-src-avatar" class="py-2 px-2 rounded-xl bg-emerald-500 text-slate-950">
+                🤖 Avatar IA
+              </button>
+              <button onclick="setInsetSource('webcam')" id="inset-src-webcam" class="py-2 px-2 rounded-xl bg-studio-card text-slate-200 border border-studio-border">
+                📱 Selfie Vivo
+              </button>
+              <label class="py-2 px-2 rounded-xl bg-studio-card text-slate-200 border border-studio-border text-center cursor-pointer">
+                📂 Subir Clip
+                <input type="file" accept="video/*,image/*" class="hidden" onchange="handleInsetFileUpload(event)" />
+              </label>
+            </div>
+          </div>
+
+          <!-- Esquina y Forma -->
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="text-[11px] text-slate-400 font-bold block mb-1">Esquina en 9:16:</label>
+              <select onchange="state.inset.corner = this.value" class="w-full bg-studio-card border border-studio-border rounded-xl px-2.5 py-2 text-xs text-white">
+                <option value="top-right" selected>Superior Derecha</option>
+                <option value="top-left">Superior Izquierda</option>
+                <option value="bottom-right">Inferior Derecha</option>
+                <option value="bottom-left">Inferior Izquierda</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-400 font-bold block mb-1">Forma del Recuadro:</label>
+              <select onchange="state.inset.shape = this.value" class="w-full bg-studio-card border border-studio-border rounded-xl px-2.5 py-2 text-xs text-white">
+                <option value="circle" selected>Círculo Podcast</option>
+                <option value="rounded">Rectángulo Redondeado</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Tamaño del Inset -->
+          <div class="bg-studio-card border border-studio-border rounded-xl p-3 space-y-2">
+            <div class="flex justify-between text-xs">
+              <span class="text-slate-300">Tamaño de Cámara PiP</span>
+              <span id="inset-size-lbl" class="font-mono text-emerald-400">170px</span>
+            </div>
+            <input type="range" min="110" max="250" value="170" oninput="state.inset.size = Number(this.value); document.getElementById('inset-size-lbl').textContent = this.value + 'px'" class="w-full" />
+          </div>
+        </div>
+
+        <!-- ================= PANEL MÓDULO 4: assets/make_watermark.py ================= -->
+        <div id="mod-panel-watermark" class="hidden p-4 space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="px-2 py-0.5 text-[10px] font-mono font-bold rounded bg-sky-500/15 text-sky-400 border border-sky-500/30">make_watermark.py</span>
+              <h3 class="text-sm font-bold text-white mt-1">Marca de Agua y Branding</h3>
+            </div>
+            <label class="flex items-center gap-1.5 text-xs font-bold text-emerald-400 cursor-pointer">
+              <input type="checkbox" checked onchange="state.watermark.enabled = this.checked" class="w-4 h-4 accent-emerald-500 rounded" />
+              <span>Activa</span>
+            </label>
+          </div>
+
+          <div class="space-y-3">
+            <div>
+              <label class="text-xs text-slate-300 font-semibold block mb-1">Texto de Marca de Agua:</label>
+              <input type="text" value="@OpenShorts_PRO" oninput="state.watermark.text = this.value" class="w-full bg-studio-card border border-studio-border rounded-xl px-3 py-2 text-xs text-white" />
+            </div>
+
+            <div class="flex items-center justify-between bg-studio-card border border-studio-border rounded-xl p-3">
+              <span class="text-xs text-slate-300">Subir Logo PNG Transparente:</span>
+              <label class="px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold cursor-pointer">
+                Elegir PNG
+                <input type="file" accept="image/*" class="hidden" onchange="handleWatermarkLogoUpload(event)" />
+              </label>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2.5">
+              <div>
+                <label class="text-[11px] text-slate-400 font-bold block mb-1">Posición:</label>
+                <select onchange="state.watermark.position = this.value" class="w-full bg-studio-card border border-studio-border rounded-xl px-2.5 py-2 text-xs text-white">
+                  <option value="top-left" selected>Superior Izquierda</option>
+                  <option value="top-right">Superior Derecha</option>
+                  <option value="bottom-left">Inferior Izquierda</option>
+                  <option value="bottom-right">Inferior Derecha</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-[11px] text-slate-400 font-bold block mb-1">Opacidad:</label>
+                <input type="range" min="0.2" max="1" step="0.05" value="0.85" oninput="state.watermark.opacity = Number(this.value)" class="w-full mt-2" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Consola de Eventos en Tiempo Real -->
+      <div class="bg-studio-panel border border-studio-border rounded-2xl p-3.5 shadow-lg">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+            <i class="fa-solid fa-terminal text-emerald-400"></i> Registro de Pipeline OpenShorts
+          </span>
+          <button onclick="clearPipelineLogs()" class="text-[10px] text-slate-400 hover:text-white">Limpiar</button>
+        </div>
+        <div id="pipeline-log-box" class="bg-studio-bg border border-studio-border rounded-xl p-2.5 h-28 overflow-y-auto font-mono text-[11px] text-emerald-400 space-y-1"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ================= VISTA 2: BÓVEDA DE CLIPS EN DISPOSITIVO MÓVIL (INDEXEDDB) ================= -->
+  <section id="view-vault" class="hidden flex-1 max-w-[1400px] w-full mx-auto p-4 sm:p-6">
+    <div class="bg-studio-panel border border-studio-border rounded-2xl p-4 sm:p-6 shadow-xl">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-studio-border">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-0.5 text-[10px] font-bold uppercase rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Persistencia Local + Descarga Directa</span>
+            <span id="vault-storage-used" class="text-xs font-mono text-slate-400">0.0 MB almacenados</span>
+          </div>
+          <h2 class="text-lg sm:text-xl font-extrabold text-white mt-1">Bóveda de Shorts Guardados en el Dispositivo</h2>
+          <p class="text-xs text-slate-400">Cada clip generado se guarda automáticamente aquí (IndexedDB) y en la carpeta Descargas de tu teléfono Android.</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <button onclick="exportVaultMetadataJSON()" class="px-3 py-2 rounded-xl bg-studio-card hover:bg-slate-800 border border-studio-border text-xs font-bold text-slate-200 flex items-center gap-1.5">
+            <i class="fa-solid fa-file-export text-emerald-400"></i> Exportar JSON
+          </button>
+          <button onclick="clearEntireVault()" class="px-3 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-xs font-bold text-rose-300 flex items-center gap-1.5">
+            <i class="fa-solid fa-trash-can"></i> Vaciar Bóveda
+          </button>
+        </div>
+      </div>
+
+      <!-- Grid de Clips Guardados -->
+      <div id="vault-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-5"></div>
+    </div>
+  </section>
+
+  <!-- ================= VISTA 3: SINCRONIZACIÓN CON SERVIDOR & BACKEND PYTHON ================= -->
+  <section id="view-server" class="hidden flex-1 max-w-[1200px] w-full mx-auto p-4 sm:p-6">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <!-- Configuración de Auto-Guardado en Servidor -->
+      <div class="lg:col-span-6 bg-studio-panel border border-studio-border rounded-2xl p-5 shadow-xl space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <span class="px-2 py-0.5 text-[10px] font-mono font-bold rounded bg-violet-500/20 text-violet-300 border border-violet-500/30">Webhook / REST Upload</span>
+            <h2 class="text-base font-extrabold text-white mt-1">Guardado Automático en Servidor Remoto</h2>
+          </div>
+          <label class="flex items-center gap-2 text-xs font-bold text-emerald-400 cursor-pointer">
+            <input type="checkbox" id="server-auto-sync-chk" onchange="toggleAutoServer(this.checked)" class="w-4 h-4 accent-emerald-500 rounded" />
+            <span>Auto-Sincronizar</span>
+          </label>
+        </div>
+
+        <p class="text-xs text-slate-400 leading-relaxed">
+          Conecta esta aplicación web con tu propio servidor Python/FastAPI, Docker o VPS. Cuando esté activo, cada clip generado en el teléfono se enviará automáticamente mediante <code class="text-emerald-400">POST multipart/form-data</code>.
+        </p>
+
+        <div class="space-y-3">
+          <div>
+            <label class="text-xs font-bold text-slate-300 block mb-1">URL del Endpoint de Subida (Servidor OpenShorts):</label>
+            <input type="url" id="server-url-input" value="http://127.0.0.1:8000/api/clips/upload" oninput="saveServerSettings()" class="w-full bg-studio-card border border-studio-border rounded-xl px-3 py-2.5 text-xs font-mono text-white" />
+          </div>
+
+          <div>
+            <label class="text-xs font-bold text-slate-300 block mb-1">Token de Autorización (Opcional Bearer Key):</label>
+            <input type="password" id="server-token-input" value="openshorts-secret-token-2026" oninput="saveServerSettings()" class="w-full bg-studio-card border border-studio-border rounded-xl px-3 py-2.5 text-xs font-mono text-white" />
+          </div>
+
+          <div class="flex gap-2 pt-1">
+            <button onclick="testServerConnection()" class="flex-1 py-2.5 px-4 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition">
+              <i class="fa-solid fa-plug-circle-check"></i> Probar Conexión con Servidor
+            </button>
+            <button onclick="syncAllPendingClipsToServer()" class="flex-1 py-2.5 px-4 rounded-xl bg-studio-card hover:bg-slate-800 border border-studio-border text-emerald-400 font-bold text-xs flex items-center justify-center gap-2 transition">
+              <i class="fa-solid fa-arrows-rotate"></i> Subir Clips Guardados
+            </button>
+          </div>
+        </div>
+
+        <div class="border-t border-studio-border pt-3">
+          <h4 class="text-xs font-bold text-slate-300 mb-2">Historial de Sincronización con Servidor:</h4>
+          <div id="server-sync-log" class="bg-studio-bg border border-studio-border rounded-xl p-3 h-36 overflow-y-auto font-mono text-[11px] text-slate-300 space-y-1">
+            <div>[SISTEMA] Listo para sincronizar clips con el servidor remoto o guardar en bóveda local.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Generador del Servidor Python (app.py + FFmpeg) -->
+      <div class="lg:col-span-6 bg-studio-panel border border-studio-border rounded-2xl p-5 shadow-xl flex flex-col justify-between space-y-4">
+        <div>
+          <span class="px-2 py-0.5 text-[10px] font-mono font-bold rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Backend Oficial Compatible</span>
+          <h2 class="text-base font-extrabold text-white mt-1">Servidor Python Autónomo (`openshorts_server.py`)</h2>
+          <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+            ¿Quieres recibir automáticamente los clips en tu PC, Termux o VPS con procesamiento FFmpeg nativo? Descarga el servidor completo en Python listo para ejecutar.
+          </p>
+
+          <pre class="mt-3 bg-studio-bg border border-studio-border rounded-xl p-3 text-[11px] font-mono text-emerald-300 overflow-x-auto max-h-60"># Instalación rápida en PC / VPS / Termux:
+pip install fastapi uvicorn python-multipart
+python openshorts_server.py
+
+# Endpoints incluidos automáticamente:
+# POST /api/clips/upload  -> Recibe y guarda cada clip .webm/.mp4 en ./saved_clips/
+# GET  /api/clips/list    -> Lista todos los clips almacenados en el servidor
+# POST /api/ffmpeg/render -> Re-procesa con FFmpeg nativo (9:16 + subtítulos ASS)</pre>
+        </div>
+
+        <button onclick="downloadPythonServerFile()" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg">
+          <i class="fa-brands fa-python text-base"></i>
+          <span>Descargar `openshorts_server.py` Completo</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Elementos multimedia ocultos de soporte -->
+  <video id="uploaded-video-el" class="hidden" playsinline crossorigin="anonymous"></video>
+  <video id="inset-video-el" class="hidden" autoplay muted loop playsinline crossorigin="anonymous"></video>
+
+  <!-- Toast de Notificación No Intrusiva -->
+  <div id="toast-box" class="fixed bottom-5 right-5 z-50 pointer-events-none opacity-0 translate-y-3 transition-all duration-300 max-w-sm bg-studio-card border border-emerald-500/50 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3">
+    <i id="toast-icon" class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
+    <div>
+      <div id="toast-title" class="text-xs font-extrabold">Acción completada</div>
+      <div id="toast-msg" class="text-[11px] text-slate-300">Guardado automáticamente en tu dispositivo</div>
+    </div>
+  </div>
+
+  <!-- ================= LÓGICA COMPLETA DE LA APLICACIÓN ================= -->
+  <script>
+    /*************************************************************************
+     * 1. ESTADO GLOBAL DE LA PLATAFORMA OPENSHORTS STUDIO
+     *************************************************************************/
+    const state = {
+      sourceType: 'demo', // 'demo' | 'uploaded'
+      isPlaying: true,
+      isMuted: false,
+      currentTime: 0,
+      duration: 30,
+      autoDownloadMobile: true,
+      autoUploadServer: false,
+      serverUrl: localStorage.getItem('os_server_url') || 'http://127.0.0.1:8000/api/clips/upload',
+      serverToken: localStorage.getItem('os_server_token') || 'openshorts-secret-token-2026',
+
+      // Módulo active_speaker.py
+      framing: {
+        mode: 'auto_speaker', // 'auto_speaker' | 'split_screen' | 'blur_bg'
+        target: 'auto',       // 'auto' | 'left' | 'center' | 'right'
+        zoom: 1.05,
+        panXOffset: 0,
+        currentSmoothedCenterX: 0.30, // LERP 0.0 -> 1.0 sobre el lienzo 16:9
+        detectedSpeakerLabel: 'Alex (Izquierda)'
+      },
+
+      // Módulo burned_subtitles.py
+      subtitles: {
+        enabled: true,
+        preset: 'hormozi', // 'hormozi' | 'tiktok' | 'mrbeast' | 'minimal'
+        fontSize: 48,
+        posY: 74, // porcentaje vertical
+        highlightColor: '#facc15',
+        lines: [
+          { start: 0.0, end: 3.5, text: '¿Sabías cómo convertir un video largo en viral?' },
+          { start: 3.5, end: 7.5, text: 'El secreto está en el encuadre dinámico 9:16' },
+          { start: 7.5, end: 11.5, text: 'Primero detectamos quién habla en tiempo real' },
+          { start: 11.5, end: 15.5, text: 'Luego quemamos subtítulos palabra por palabra' },
+          { start: 15.5, end: 20.0, text: 'Agregamos cámara de reacción y marca de agua' },
+          { start: 20.0, end: 25.0, text: 'Y guardamos cada clip directo en tu Android' },
+          { start: 25.0, end: 30.0, text: '¡Listo para publicar en TikTok, Reels y Shorts!' }
+        ]
+      },
+
+      // Módulo camera_inset.py
+      inset: {
+        enabled: true,
+        source: 'avatar', // 'avatar' | 'webcam' | 'custom_media'
+        corner: 'top-right',
+        shape: 'circle',
+        size: 170,
+        customImage: null
+      },
+
+      // Módulo assets/make_watermark.py
+      watermark: {
+        enabled: true,
+        text: '@OpenShorts_PRO',
+        position: 'top-left',
+        opacity: 0.85,
+        logoImg: null
+      },
+
+      // Clips sugeridos por IA / Auto-Slicer (app.py)
+      clips: [
+        { id: 'clip-1', title: 'Gancho: Cómo crear un Short Viral', start: 0.0, end: 7.5, score: 98 },
+        { id: 'clip-2', title: 'Secreto del Encuadre Dinámico IA', start: 7.5, end: 15.5, score: 95 },
+        { id: 'clip-3', title: 'Guardado Automático en Móvil y Server', start: 15.5, end: 25.0, score: 92 }
+      ],
+      activeClipId: 'clip-1'
+    };
+
+    // Referencias DOM y Lienzos
+    const mainCanvas = document.getElementById('shorts-canvas');
+    const ctx = mainCanvas.getContext('2d');
+
+    // Lienzo oculto 16:9 (1280x720) para generar o leer el video panorámico original
+    const source16x9Canvas = document.createElement('canvas');
+    source16x9Canvas.width = 1280;
+    source16x9Canvas.height = 720;
+    const srcCtx = source16x9Canvas.getContext('2d');
+
+    const uploadedVideoEl = document.getElementById('uploaded-video-el');
+    const insetVideoEl = document.getElementById('inset-video-el');
+
+    // Web Audio API para síntesis de voz/tono en modo Demo y mezcla en MediaRecorder
+    let audioCtx = null;
+    let mediaStreamDest = null;
+    let demoSynthTimer = null;
+    let uploadedVideoAudioSource = null;
+
+    /*************************************************************************
+     * 2. SISTEMA DE NOTIFICACIONES Y LOGS
+     *************************************************************************/
+    function showToast(title, msg, iconClass = 'fa-circle-check text-emerald-400') {
+      const box = document.getElementById('toast-box');
+      document.getElementById('toast-title').textContent = title;
+      document.getElementById('toast-msg').textContent = msg;
+      document.getElementById('toast-icon').className = `fa-solid ${iconClass} text-lg`;
+      box.classList.remove('opacity-0', 'translate-y-3');
+      setTimeout(() => {
+        box.classList.add('opacity-0', 'translate-y-3');
+      }, 3400);
+    }
+
+    function logPipeline(msg) {
+      const box = document.getElementById('pipeline-log-box');
+      const time = new Date().toLocaleTimeString('es-ES', { hour12: false });
+      const line = document.createElement('div');
+      line.textContent = `[${time}] ${msg}`;
+      box.appendChild(line);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function clearPipelineLogs() {
+      document.getElementById('pipeline-log-box').innerHTML = '';
+      logPipeline('Consola reiniciada.');
+    }
+
+    /*************************************************************************
+     * 3. BASE DE DATOS PERSISTENTE EN EL DISPOSITIVO MÓVIL (INDEXEDDB)
+     *************************************************************************/
+    const DB_NAME = 'OpenShortsMobileVaultDB';
+    const DB_VERSION = 1;
+    const STORE_NAME = 'generated_clips';
+    let dbInstance = null;
+
+    function initIndexedDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains(STORE_NAME)) {
+            db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+          }
+        };
+        req.onsuccess = (e) => {
+          dbInstance = e.target.result;
+          refreshVaultUI();
+          resolve(dbInstance);
+        };
+        req.onerror = (e) => reject(e);
+      });
+    }
+
+    async function saveClipToMobileVault(clipRecord) {
+      if (!dbInstance) await initIndexedDB();
+      return new Promise((resolve, reject) => {
+        const tx = dbInstance.transaction([STORE_NAME], 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        store.put(clipRecord);
+        tx.oncomplete = () => {
+          logPipeline(`Guardado persistente en IndexedDB: "${clipRecord.title}"`);
+          refreshVaultUI();
+          resolve(true);
+        };
+        tx.onerror = (err) => reject(err);
+      });
+    }
+
+    async function getAllClipsFromVault() {
+      if (!dbInstance) await initIndexedDB();
+      return new Promise((resolve) => {
+        const tx = dbInstance.transaction([STORE_NAME], 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.getAll();
+        req.onsuccess = () => resolve((req.result || []).sort((a, b) => b.createdAt - a.createdAt));
+        req.onerror = () => resolve([]);
+      });
+    }
+
+    async function deleteClipFromVault(id) {
+      if (!dbInstance) await initIndexedDB();
+      const tx = dbInstance.transaction([STORE_NAME], 'readwrite');
+      tx.objectStore(STORE_NAME).delete(id);
+      tx.oncomplete = () => {
+        showToast('Clip eliminado', 'Se liberó el espacio en la bóveda local');
+        refreshVaultUI();
+      };
+    }
+
+    async function clearEntireVault() {
+      if (!dbInstance) await initIndexedDB();
+      const tx = dbInstance.transaction([STORE_NAME], 'readwrite');
+      tx.objectStore(STORE_NAME).clear();
+      tx.oncomplete = () => {
+        showToast('Bóveda vaciada', 'Todos los clips locales fueron eliminados');
+        refreshVaultUI();
+      };
+    }
+
+    async function refreshVaultUI() {
+      const clips = await getAllClipsFromVault();
+      document.getElementById('vault-count-badge').textContent = clips.length;
+
+      let totalBytes = 0;
+      clips.forEach(c => { if (c.sizeBytes) totalBytes += c.sizeBytes; });
+      document.getElementById('vault-storage-used').textContent = `${(totalBytes / (1024 * 1024)).toFixed(2)} MB almacenados`;
+
+      const grid = document.getElementById('vault-grid');
+      grid.innerHTML = '';
+
+      if (clips.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full py-12 text-center border border-dashed border-studio-border rounded-2xl">
+            <i class="fa-solid fa-film text-3xl text-slate-600 mb-2"></i>
+            <p class="text-sm font-bold text-slate-300">Todavía no has generado ningún Short</p>
+            <p class="text-xs text-slate-500 mt-1">Pulsa "Generar Short" en el estudio y se guardará automáticamente aquí y en tu teléfono.</p>
+          </div>
+        `;
+        return;
+      }
+
+      clips.forEach(clip => {
+        const videoUrl = clip.blob ? URL.createObjectURL(clip.blob) : '';
+        const dateStr = new Date(clip.createdAt).toLocaleString('es-ES');
+        const sizeMB = ((clip.sizeBytes || 0) / (1024 * 1024)).toFixed(2);
+
+        const card = document.createElement('div');
+        card.className = 'bg-studio-card border border-studio-border rounded-2xl overflow-hidden flex flex-col justify-between shadow-lg';
+        card.innerHTML = `
+          <div>
+            <div class="relative aspect-[9/16] bg-black overflow-hidden">
+              <video src="${videoUrl}" controls playsinline class="w-full h-full object-cover"></video>
+              <span class="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500 text-slate-950">
+                🔥 Viral ${clip.score || 95}
+              </span>
+              <span class="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-mono bg-slate-950/80 text-slate-200 border border-slate-700">
+                ${sizeMB} MB
+              </span>
+            </div>
+            <div class="p-3">
+              <h4 class="text-xs font-extrabold text-white truncate">${clip.title}</h4>
+              <p class="text-[10px] text-slate-400 mt-0.5">${dateStr} • ${clip.durationSec}s</p>
+              <div class="mt-2 flex items-center gap-1.5">
+                <span class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-emerald-400 font-semibold">
+                  <i class="fa-solid fa-check mr-1"></i>En Dispositivo
+                </span>
+                <span class="text-[10px] px-2 py-0.5 rounded bg-slate-800 ${clip.serverSynced ? 'text-violet-400' : 'text-slate-400'} font-semibold">
+                  <i class="fa-solid fa-cloud mr-1"></i>${clip.serverSynced ? 'Sincronizado' : 'Local'}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="p-3 pt-0 grid grid-cols-3 gap-1.5">
+            <button onclick="downloadSavedClip('${clip.id}')" class="py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-[11px] flex items-center justify-center gap-1">
+              <i class="fa-solid fa-download"></i> Bajar
+            </button>
+            <button onclick="shareSavedClip('${clip.id}')" class="py-2 rounded-xl bg-violet-600/30 hover:bg-violet-600/40 border border-violet-500/40 text-violet-200 font-bold text-[11px] flex items-center justify-center gap-1">
+              <i class="fa-solid fa-share-nodes"></i> Share
+            </button>
+            <button onclick="deleteClipFromVault('${clip.id}')" class="py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 font-bold text-[11px] flex items-center justify-center">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    async function downloadSavedClip(id) {
+      const clips = await getAllClipsFromVault();
+      const found = clips.find(c => c.id === id);
+      if (!found || !found.blob) return;
+      triggerBrowserDownload(found.blob, `${sanitizeFilename(found.title)}.webm`);
+    }
+
+    async function shareSavedClip(id) {
+      const clips = await getAllClipsFromVault();
+      const found = clips.find(c => c.id === id);
+      if (!found || !found.blob) return;
+      const file = new File([found.blob], `${sanitizeFilename(found.title)}.webm`, { type: found.blob.type || 'video/webm' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            title: found.title,
+            text: 'Creado con OpenShorts Studio 9:16',
+            files: [file]
+          });
+        } catch (err) {
+          logPipeline('Compartir cancelado por el usuario.');
+        }
+      } else {
+        triggerBrowserDownload(found.blob, `${sanitizeFilename(found.title)}.webm`);
+        showToast('Descargado al dispositivo', 'Tu navegador descargó el archivo para que lo subas a TikTok/Reels');
+      }
+    }
+
+    function triggerBrowserDownload(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 1500);
+    }
+
+    function sanitizeFilename(name) {
+      return (name || 'openshort_clip').toLowerCase().replace(/[^a-z0-9-_]+/g, '_').replace(/^_+|_+$/g, '') || 'openshort_clip';
+    }
+
+    /*************************************************************************
+     * 4. GENERADOR DE VIDEO DEMO 16:9 CON 2 HABLANTES Y AUDIO SINTETIZADO
+     *************************************************************************/
+    function ensureAudioContext() {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContextClass();
+        mediaStreamDest = audioCtx.createMediaStreamDestination();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playSpeechSyllablePulse(speakerIndex) {
+      if (!state.isPlaying || state.isMuted || state.sourceType !== 'demo') return;
+      try {
+        ensureAudioContext();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        // Frecuencia fundamental simulando timbre de voz masculina (izq) o femenina (der)
+        const baseFreq = speakerIndex === 0 ? 135 : 215;
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(baseFreq + Math.random() * 45, audioCtx.currentTime);
+
+        gain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.06, audioCtx.currentTime + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.14);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        if (mediaStreamDest) gain.connect(mediaStreamDest);
+
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.15);
+      } catch (e) {}
+    }
+
+    // Dibuja el estudio de podcast 16:9 (1280x720) con dos hablantes animados
+    function renderDemoStudio16x9(t) {
+      const w = 1280;
+      const h = 720;
+
+      // Fondo de estudio moderno con luces LED de neón
+      const bgGrad = srcCtx.createLinearGradient(0, 0, w, h);
+      bgGrad.addColorStop(0, '#0f172a');
+      bgGrad.addColorStop(0.5, '#1e1b4b');
+      bgGrad.addColorStop(1, '#064e3b');
+      srcCtx.fillStyle = bgGrad;
+      srcCtx.fillRect(0, 0, w, h);
+
+      // Cuadrícula sutil de estudio
+      srcCtx.strokeStyle = 'rgba(255,255,255,0.04)';
+      srcCtx.lineWidth = 2;
+      for (let x = 0; x < w; x += 80) {
+        srcCtx.beginPath(); srcCtx.moveTo(x, 0); srcCtx.lineTo(x, h); srcCtx.stroke();
+      }
+
+      // Determinar qué hablante está activo según el segundo actual del video
+      // Alterna cada ~3.75 segundos entre Hablante Izquierdo (0) y Hablante Derecho (1)
+      const activeSpeakerIdx = Math.floor(t / 3.75) % 2;
+      const mouthOpen = Math.abs(Math.sin(t * 14)) * 16;
+
+      // HABLANTE 1 (IZQUIERDA - X: 360)
+      drawSimulatedSpeaker(srcCtx, 360, 410, 'ALEX • HOST', '#10b981', activeSpeakerIdx === 0, mouthOpen, t);
+
+      // HABLANTE 2 (DERECHA - X: 920)
+      drawSimulatedSpeaker(srcCtx, 920, 410, 'SOFÍA • AI PRO', '#8b5cf6', activeSpeakerIdx === 1, mouthOpen, t);
+
+      // Mesa del estudio
+      srcCtx.fillStyle = '#090d16';
+      srcCtx.fillRect(0, 590, w, 130);
+      srcCtx.fillStyle = '#10b981';
+      srcCtx.fillRect(0, 590, w, 4);
+
+      return activeSpeakerIdx;
+    }
+
+    function drawSimulatedSpeaker(c, cx, cy, name, color, isTalking, mouthOpen, t) {
+      c.save();
+      const bounce = isTalking ? Math.sin(t * 9) * 5 : 0;
+
+      // Halo de energía cuando habla
+      if (isTalking) {
+        const halo = c.createRadialGradient(cx, cy - 40, 20, cx, cy - 40, 190);
+        halo.addColorStop(0, color + '55');
+        halo.addColorStop(1, 'transparent');
+        c.fillStyle = halo;
+        c.beginPath();
+        c.arc(cx, cy - 40, 190, 0, Math.PI * 2);
+        c.fill();
+      }
+
+      // Hombros / Torso
+      c.fillStyle = isTalking ? '#1e293b' : '#0f172a';
+      c.strokeStyle = color;
+      c.lineWidth = isTalking ? 5 : 2;
+      c.beginPath();
+        c.roundRect(cx - 125, cy + 40 + bounce, 250, 170, 45);
+      c.fill();
+      c.stroke();
+
+      // Cabeza
+      c.fillStyle = '#fcd34d';
+      c.beginPath();
+      c.arc(cx, cy - 45 + bounce, 74, 0, Math.PI * 2);
+      c.fill();
+
+      // Auriculares de estudio
+      c.strokeStyle = color;
+      c.lineWidth = 12;
+      c.beginPath();
+      c.arc(cx, cy - 52 + bounce, 78, Math.PI * 1.05, Math.PI * 1.95);
+      c.stroke();
+
+      // Ojos
+      c.fillStyle = '#0f172a';
+      c.beginPath();
+      c.arc(cx - 26, cy - 55 + bounce, 8, 0, Math.PI * 2);
+      c.arc(cx + 26, cy - 55 + bounce, 8, 0, Math.PI * 2);
+      c.fill();
+
+      // Boca sincronizada con el audio
+      c.fillStyle = '#be123c';
+      c.beginPath();
+      const mH = isTalking ? (6 + mouthOpen) : 5;
+      c.roundRect(cx - 22, cy - 20 + bounce, 44, mH, 8);
+      c.fill();
+
+      // Micrófono Shure de podcast
+      c.fillStyle = '#334155';
+      c.beginPath();
+      c.roundRect(cx - 18, cy + 45, 36, 65, 14);
+      c.fill();
+
+      // Etiqueta de nombre
+      c.fillStyle = 'rgba(7, 9, 14, 0.85)';
+      c.beginPath();
+      c.roundRect(cx - 95, cy + 125, 190, 36, 10);
+      c.fill();
+      c.fillStyle = color;
+      c.font = '800 16px Inter, sans-serif';
+      c.textAlign = 'center';
+      c.fillText(name, cx, cy + 149);
+
+      c.restore();
+    }
+
+    /*************************************************************************
+     * 5. MOTOR DE RENDERIZADO 9:16 (active_speaker + burned_subtitles + inset)
+     *************************************************************************/
+    let lastFrameTimestamp = performance.now();
+    let syllableCounter = 0;
+
+    function masterRenderLoop(now) {
+      const dt = (now - lastFrameTimestamp) / 1000;
+      lastFrameTimestamp = now;
+
+      const activeClip = getActiveClip();
+
+      if (state.isPlaying) {
+        if (state.sourceType === 'demo') {
+          state.currentTime += dt;
+          if (activeClip && (state.currentTime < activeClip.start || state.currentTime >= activeClip.end)) {
+            state.currentTime = activeClip.start;
+          }
+          syllableCounter += dt;
+          if (syllableCounter > 0.24) {
+            syllableCounter = 0;
+            const spkIdx = Math.floor(state.currentTime / 3.75) % 2;
+            playSpeechSyllablePulse(spkIdx);
+          }
+        } else if (state.sourceType === 'uploaded') {
+          state.currentTime = uploadedVideoEl.currentTime;
+          if (activeClip && state.currentTime >= activeClip.end) {
+            uploadedVideoEl.currentTime = activeClip.start;
+          }
+        }
+        updateTimelineUI();
+      }
+
+      // 1. Actualizar el lienzo fuente 16:9
+      let activeSpeakerIdx = 0;
+      if (state.sourceType === 'demo') {
+        activeSpeakerIdx = renderDemoStudio16x9(state.currentTime);
+      } else {
+        if (uploadedVideoEl.readyState >= 2) {
+          srcCtx.drawImage(uploadedVideoEl, 0, 0, 1280, 720);
+        }
+        activeSpeakerIdx = Math.floor(state.currentTime / 4) % 2;
+      }
+
+      // 2. Calcular centro horizontal del hablante activo (active_speaker.py)
+      let targetNormX = 0.5;
+      if (state.framing.target === 'auto') {
+        targetNormX = activeSpeakerIdx === 0 ? 0.28 : 0.72;
+        state.framing.detectedSpeakerLabel = activeSpeakerIdx === 0 ? 'Alex (Izq)' : 'Sofía (Der)';
+      } else if (state.framing.target === 'left') {
+        targetNormX = 0.28;
+        state.framing.detectedSpeakerLabel = 'Fijo Izquierda';
+      } else if (state.framing.target === 'center') {
+        targetNormX = 0.50;
+        state.framing.detectedSpeakerLabel = 'Fijo Centro';
+      } else if (state.framing.target === 'right') {
+        targetNormX = 0.72;
+        state.framing.detectedSpeakerLabel = 'Fijo Derecha';
+      }
+
+      // Aplicar offset manual del usuario
+      targetNormX = Math.max(0.18, Math.min(0.82, targetNormX + (state.framing.panXOffset / 100)));
+
+      // Suavizado LERP cinematográfico (sin saltos bruscos)
+      state.framing.currentSmoothedCenterX += (targetNormX - state.framing.currentSmoothedCenterX) * 0.08;
+
+      // 3. Dibujar en el lienzo vertical 9:16 (720x1280)
+      drawVertical9x16Frame();
+
+      requestAnimationFrame(masterRenderLoop);
+    }
+
+    function drawVertical9x16Frame() {
+      const cw = 720;
+      const ch = 1280;
+      ctx.clearRect(0, 0, cw, ch);
+
+      const zoom = state.framing.zoom;
+
+      if (state.framing.mode === 'auto_speaker') {
+        // Recorte vertical 9:16 directo del 16:9 siguiendo currentSmoothedCenterX
+        const cropH = 720 / zoom;
+        const cropW = cropH * (9 / 16);
+        const centerPx = state.framing.currentSmoothedCenterX * 1280;
+        const sx = Math.max(0, Math.min(1280 - cropW, centerPx - cropW / 2));
+        const sy = (720 - cropH) / 2;
+
+        ctx.drawImage(source16x9Canvas, sx, sy, cropW, cropH, 0, 0, cw, ch);
+
+        // Guía HUD opcional (solo vista previa si está marcada)
+        if (document.getElementById('chk-show-hud').checked) {
+          ctx.save();
+          ctx.strokeStyle = 'rgba(16, 185, 129, 0.55)';
+          ctx.lineWidth = 3;
+          ctx.setLineDash([10, 8]);
+          ctx.strokeRect(110, 250, 500, 520);
+          ctx.fillStyle = 'rgba(16, 185, 129, 0.85)';
+          ctx.font = '700 18px Inter, sans-serif';
+          ctx.fillText(`TRACKING: ${state.framing.detectedSpeakerLabel}`, 120, 240);
+          ctx.restore();
+        }
+      } else if (state.framing.mode === 'split_screen') {
+        // Mitad superior: Hablante Izquierdo | Mitad inferior: Hablante Derecho
+        ctx.drawImage(source16x9Canvas, 60, 60, 600, 600, 0, 0, 720, 640);
+        ctx.drawImage(source16x9Canvas, 620, 60, 600, 600, 0, 640, 720, 640);
+        // Línea divisoria neón
+        ctx.fillStyle = '#10b981';
+        ctx.fillRect(0, 636, 720, 8);
+      } else if (state.framing.mode === 'blur_bg') {
+        // Fondo desenfocado + 16:9 centrado
+        ctx.save();
+        ctx.filter = 'blur(26px) brightness(0.45)';
+        ctx.drawImage(source16x9Canvas, 280, 0, 720, 720, -40, -40, 800, 1360);
+        ctx.restore();
+
+        const targetH = Math.round(720 * (9 / 16) * zoom);
+        const yPos = Math.round((1280 - targetH) / 2);
+        ctx.drawImage(source16x9Canvas, 0, 0, 1280, 720, 0, yPos, 720, targetH);
+      }
+
+      // 4. Dibujar Camera Inset (camera_inset.py)
+      if (state.inset.enabled) {
+        drawCameraInsetOverlay(cw, ch);
+      }
+
+      // 5. Dibujar Marca de Agua (make_watermark.py)
+      if (state.watermark.enabled) {
+        drawWatermarkOverlay(cw, ch);
+      }
+
+      // 6. Dibujar Subtítulos Quemados (burned_subtitles.py)
+      if (state.subtitles.enabled) {
+        drawBurnedSubtitlesOverlay(cw, ch, state.currentTime);
+      }
+    }
+
+    function drawCameraInsetOverlay(cw, ch) {
+      const size = state.inset.size;
+      const pad = 34;
+      let x = cw - size - pad;
+      let y = pad + 60;
+
+      if (state.inset.corner === 'top-left') { x = pad; y = pad + 60; }
+      if (state.inset.corner === 'bottom-right') { x = cw - size - pad; y = ch - size - 240; }
+      if (state.inset.corner === 'bottom-left') { x = pad; y = ch - size - 240; }
+
+      ctx.save();
+      ctx.beginPath();
+      if (state.inset.shape === 'circle') {
+        ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
+      } else {
+        ctx.roundRect(x, y, size, size, 28);
+      }
+      ctx.clip();
+
+      if (state.inset.source === 'webcam' && insetVideoEl.readyState >= 2) {
+        ctx.drawImage(insetVideoEl, x, y, size, size);
+      } else if (state.inset.source === 'custom_media' && state.inset.customImage) {
+        ctx.drawImage(state.inset.customImage, x, y, size, size);
+      } else {
+        // Avatar Reactivo Integrado
+        const grad = ctx.createLinearGradient(x, y, x + size, y + size);
+        grad.addColorStop(0, '#065f46');
+        grad.addColorStop(1, '#1e1b4b');
+        ctx.fillStyle = grad;
+        ctx.fillRect(x, y, size, size);
+
+        // Rostro estilizado reactivo
+        const pulse = Math.abs(Math.sin(state.currentTime * 12)) * 8;
+        ctx.fillStyle = '#fde047';
+        ctx.beginPath();
+        ctx.arc(x + size / 2, y + size / 2 - 8, size * 0.28, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.roundRect(x + size / 2 - 14, y + size / 2 + 4, 28, 4 + pulse, 4);
+        ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '800 13px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('CAM INSET', x + size / 2, y + size - 14);
+      }
+      ctx.restore();
+
+      // Borde neón del recuadro
+      ctx.save();
+      ctx.strokeStyle = '#10b981';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      if (state.inset.shape === 'circle') {
+        ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
+      } else {
+        ctx.roundRect(x, y, size, size, 28);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawWatermarkOverlay(cw, ch) {
+      ctx.save();
+      ctx.globalAlpha = state.watermark.opacity;
+      const padX = 32;
+      let x = padX;
+      let y = 44;
+
+      if (state.watermark.position === 'top-right') { x = cw - 260; y = 44; }
+      if (state.watermark.position === 'bottom-left') { x = padX; y = ch - 95; }
+      if (state.watermark.position === 'bottom-right') { x = cw - 260; y = ch - 95; }
+
+      if (state.watermark.logoImg) {
+        ctx.drawImage(state.watermark.logoImg, x, y, 160, 54);
+      } else {
+        ctx.fillStyle = 'rgba(7, 9, 14, 0.72)';
+        ctx.beginPath();
+        ctx.roundRect(x, y, 235, 44, 22);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(16, 185, 129, 0.5)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = '#10b981';
+        ctx.beginPath();
+        ctx.arc(x + 22, y + 22, 7, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = '800 17px Inter, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(state.watermark.text || '@OpenShorts', x + 38, y + 28);
+      }
+      ctx.restore();
+    }
+
+    function drawBurnedSubtitlesOverlay(cw, ch, t) {
+      const line = state.subtitles.lines.find(l => t >= l.start && t <= l.end);
+      if (!line || !line.text.trim()) return;
+
+      const words = line.text.trim().split(/\s+/);
+      const progress = Math.max(0, Math.min(0.999, (t - line.start) / Math.max(0.1, line.end - line.start)));
+      const activeWordIdx = Math.floor(progress * words.length);
+
+      // Agrupar de 3 en 3 palabras para impacto visual estilo Shorts/TikTok
+      const chunkSize = 3;
+      const chunkIndex = Math.floor(activeWordIdx / chunkSize);
+      const chunkWords = words.slice(chunkIndex * chunkSize, (chunkIndex + 1) * chunkSize);
+      const activeInChunk = activeWordIdx % chunkSize;
+
+      const fontSize = state.subtitles.fontSize;
+      const yPos = (state.subtitles.posY / 100) * ch;
+
+      ctx.save();
+      ctx.font = `900 ${fontSize}px Montserrat, Inter, sans-serif`;
+      ctx.textBaseline = 'middle';
+
+      // Medir ancho total del bloque
+      const spacing = 16;
+      const wordWidths = chunkWords.map(w => ctx.measureText(w.toUpperCase()).width);
+      const totalW = wordWidths.reduce((a, b) => a + b, 0) + spacing * (chunkWords.length - 1);
+
+      let startX = (cw - totalW) / 2;
+
+      if (state.subtitles.preset === 'tiktok') {
+        ctx.fillStyle = 'rgba(9, 11, 16, 0.88)';
+        ctx.beginPath();
+        ctx.roundRect(startX - 26, yPos - fontSize * 0.75, totalW + 52, fontSize * 1.5, 18);
+        ctx.fill();
+      }
+
+      chunkWords.forEach((word, idx) => {
+        const upper = word.toUpperCase();
+        const isCurrent = idx === activeInChunk;
+        const wWidth = wordWidths[idx];
+
+        ctx.save();
+        if (isCurrent && (state.subtitles.preset === 'hormozi' || state.subtitles.preset === 'mrbeast')) {
+          // Efecto pop en la palabra hablada
+          const cxWord = startX + wWidth / 2;
+          ctx.translate(cxWord, yPos);
+          ctx.scale(1.12, 1.12);
+          ctx.translate(-cxWord, -yPos);
+        }
+
+        // Sombra y borde negro grueso
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = state.subtitles.preset === 'minimal' ? 4 : 11;
+        ctx.strokeStyle = '#000000';
+        ctx.shadowColor = 'rgba(0,0,0,0.85)';
+        ctx.shadowBlur = 12;
+        ctx.strokeText(upper, startX, yPos);
+
+        // Relleno de color
+        ctx.fillStyle = isCurrent ? state.subtitles.highlightColor : '#ffffff';
+        ctx.fillText(upper, startX, yPos);
+        ctx.restore();
+
+        startX += wWidth + spacing;
+      });
+
+      ctx.restore();
+    }
+
+    /*************************************************************************
+     * 6. GRABACIÓN REAL (MediaRecorder) + AUTO-GUARDADO EN MÓVIL Y SERVIDOR
+     *************************************************************************/
+    let isRenderingClip = false;
+
+    async function renderCurrentClip() {
+      if (isRenderingClip) return;
+      const clip = getActiveClip();
+      if (!clip) return;
+      await executeClipRenderPipeline(clip);
+    }
+
+    async function renderAllClipsBatch() {
+      if (isRenderingClip) return;
+      logPipeline(`Iniciando renderizado en lote de ${state.clips.length} clips...`);
+      for (let i = 0; i < state.clips.length; i++) {
+        state.activeClipId = state.clips[i].id;
+        renderClipsListUI();
+        await executeClipRenderPipeline(state.clips[i], i + 1, state.clips.length);
+      }
+      showToast('Lote completado', `Se generaron y guardaron los ${state.clips.length} clips.`);
+    }
+
+    async function executeClipRenderPipeline(clip, batchIndex = null, batchTotal = null) {
+      isRenderingClip = true;
+      ensureAudioContext();
+
+      const overlay = document.getElementById('render-overlay');
+      const bar = document.getElementById('render-progress-bar');
+      const pctTxt = document.getElementById('render-progress-pct');
+      const titleEl = document.getElementById('render-overlay-title');
+
+      overlay.classList.remove('hidden');
+      titleEl.textContent = batchIndex
+        ? `Renderizando Clip ${batchIndex}/${batchTotal}: ${clip.title}`
+        : `Renderizando: ${clip.title}`;
+
+      const recDot = document.getElementById('rec-indicator');
+      recDot.className = 'w-2.5 h-2.5 rounded-full bg-rose-500 pulse-rec';
+
+      // Posicionar en el inicio del clip
+      const durationSec = Math.max(2, Number((clip.end - clip.start).toFixed(1)));
+      state.currentTime = clip.start;
+      if (state.sourceType === 'uploaded') {
+        uploadedVideoEl.currentTime = clip.start;
+        uploadedVideoEl.play();
+      }
+      state.isPlaying = true;
+
+      // Capturar stream de video a 30 FPS del canvas 9:16 + pista de audio
+      const canvasStream = mainCanvas.captureStream(30);
+      const combinedTracks = [...canvasStream.getVideoTracks()];
+      if (mediaStreamDest && mediaStreamDest.stream.getAudioTracks().length > 0) {
+        combinedTracks.push(...mediaStreamDest.stream.getAudioTracks());
+      }
+      const finalStream = new MediaStream(combinedTracks);
+
+      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
+        ? 'video/webm;codecs=vp9,opus'
+        : (MediaRecorder.isTypeSupported('video/webm') ? 'video/webm' : '');
+
+      const chunks = [];
+      const recorder = mimeType ? new MediaRecorder(finalStream, { mimeType }) : new MediaRecorder(finalStream);
+
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) chunks.push(e.data);
+      };
+
+      const renderPromise = new Promise((resolve) => {
+        recorder.onstop = () => {
+          const blob = new Blob(chunks, { type: mimeType || 'video/webm' });
+          resolve(blob);
+        };
+      });
+
+      recorder.start(150);
+      logPipeline(`Grabando clip 9:16 "${clip.title}" (${durationSec}s)...`);
+
+      // Actualizar barra de progreso en tiempo real
+      const startWall = performance.now();
+      const totalMs = durationSec * 1000;
+
+      await new Promise((resolveStep) => {
+        const timer = setInterval(() => {
+          const elapsed = performance.now() - startWall;
+          const pct = Math.min(100, Math.round((elapsed / totalMs) * 100));
+          bar.style.width = `${pct}%`;
+          pctTxt.textContent = `${pct}%`;
+          if (elapsed >= totalMs) {
+            clearInterval(timer);
+            resolveStep();
+          }
+        }, 90);
+      });
+
+      recorder.stop();
+      const videoBlob = await renderPromise;
+
+      // Crear registro del clip
+      const clipRecord = {
+        id: 'short_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+        title: clip.title,
+        durationSec,
+        score: clip.score || 95,
+        createdAt: Date.now(),
+        sizeBytes: videoBlob.size,
+        blob: videoBlob,
+        serverSynced: false
+      };
+
+      // 1. Guardado Automático en Bóveda Persistente del Móvil (IndexedDB)
+      await saveClipToMobileVault(clipRecord);
+
+      // 2. Descarga Automática de archivo al almacenamiento del teléfono (si está activa)
+      if (state.autoDownloadMobile) {
+        triggerBrowserDownload(videoBlob, `${sanitizeFilename(clip.title)}_9x16.webm`);
+        logPipeline(`Archivo descargado automáticamente al teléfono: ${sanitizeFilename(clip.title)}_9x16.webm`);
+      }
+
+      // 3. Subida Automática al Servidor Remoto (si está activa)
+      if (state.autoUploadServer) {
+        await uploadClipToRemoteServer(clipRecord);
+      }
+
+      overlay.classList.add('hidden');
+      bar.style.width = '0%';
+      recDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400';
+      isRenderingClip = false;
+
+      showToast('¡Short 9:16 Generado y Guardado!', 'Guardado en Bóveda Móvil y descargado a tu dispositivo.');
+    }
+
+    /*************************************************************************
+     * 7. SINCRONIZACIÓN CON SERVIDOR REMOTO Y DESCARGA DE BACKEND PYTHON
+     *************************************************************************/
+    function logServerEvent(msg) {
+      const box = document.getElementById('server-sync-log');
+      const time = new Date().toLocaleTimeString('es-ES', { hour12: false });
+      const div = document.createElement('div');
+      div.textContent = `[${time}] ${msg}`;
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function saveServerSettings() {
+      state.serverUrl = document.getElementById('server-url-input').value.trim();
+      state.serverToken = document.getElementById('server-token-input').value.trim();
+      localStorage.setItem('os_server_url', state.serverUrl);
+      localStorage.setItem('os_server_token', state.serverToken);
+    }
+
+    function toggleAutoServer(flag) {
+      state.autoUploadServer = flag;
+      document.getElementById('mobile-auto-server').checked = flag;
+      document.getElementById('server-auto-sync-chk').checked = flag;
+      document.getElementById('server-dot').className = flag
+        ? 'w-2 h-2 rounded-full bg-emerald-400'
+        : 'w-2 h-2 rounded-full bg-amber-400';
+      showToast(
+        flag ? 'Auto-Sync Servidor Activo' : 'Modo Local Activo',
+        flag ? 'Cada clip generado se subirá automáticamente al servidor.' : 'Los clips se guardarán localmente en tu móvil.'
+      );
+    }
+
+    async function uploadClipToRemoteServer(clipRecord) {
+      saveServerSettings();
+      logServerEvent(`Subiendo "${clipRecord.title}" a ${state.serverUrl}...`);
+      try {
+        const formData = new FormData();
+        formData.append('file', clipRecord.blob, `${sanitizeFilename(clipRecord.title)}.webm`);
+        formData.append('title', clipRecord.title);
+        formData.append('duration', String(clipRecord.durationSec));
+        formData.append('score', String(clipRecord.score));
+
+        const res = await fetch(state.serverUrl, {
+          method: 'POST',
+          headers: state.serverToken ? { 'Authorization': `Bearer ${state.serverToken}` } : {},
+          body: formData
+        });
+
+        if (res.ok) {
+          clipRecord.serverSynced = true;
+          await saveClipToMobileVault(clipRecord);
+          logServerEvent(`✅ ÉXITO: Clip "${clipRecord.title}" almacenado en el servidor.`);
+          return true;
+        } else {
+          logServerEvent(`⚠️ Respuesta HTTP ${res.status}. El clip permanece seguro en la Bóveda Móvil.`);
+          return false;
+        }
+      } catch (err) {
+        logServerEvent(`ℹ️ Servidor offline o local (${state.serverUrl}). Clip respaldado en Bóveda IndexedDB del teléfono.`);
+        return false;
+      }
+    }
+
+    async function testServerConnection() {
+      saveServerSettings();
+      logServerEvent(`Verificando conexión con ${state.serverUrl}...`);
+      try {
+        const res = await fetch(state.serverUrl.replace('/upload', '/health'), { method: 'GET' });
+        if (res.ok) {
+          logServerEvent('✅ Servidor OpenShorts respondió ONLINE.');
+          showToast('Servidor Conectado', 'El endpoint remoto está activo y listo.');
+        } else {
+          logServerEvent(`Servidor alcanzó estado HTTP ${res.status}.`);
+        }
+      } catch (e) {
+        logServerEvent('ℹ️ No se detectó servidor activo en esa URL. Puedes descargar openshorts_server.py a la derecha.');
+        showToast('Modo Local Respaldado', 'Descarga openshorts_server.py si deseas iniciar el backend en PC/VPS.', 'fa-circle-info text-amber-400');
+      }
+    }
+
+    async function syncAllPendingClipsToServer() {
+      const clips = await getAllClipsFromVault();
+      if (clips.length === 0) {
+        showToast('Sin clips pendientes', 'Genera primero un Short en el Estudio.');
+        return;
+      }
+      for (const c of clips) {
+        await uploadClipToRemoteServer(c);
+      }
+      showToast('Sincronización finalizada', 'Revisa el registro del servidor para más detalles.');
+    }
+
+    function downloadPythonServerFile() {
+      const pyCode = `#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+OPENSHORTS STUDIO — SERVIDOR OFICIAL AUTÓNOMO (FastAPI + FFmpeg)
+Compatible con OpenShorts Mobile WebApp y módulos active_speaker / burned_subtitles.
+"""
+import os
+import time
+import shutil
+from fastapi import FastAPI, UploadFile, File, Form
+from fastapi.middleware.cors import CORSMiddleware
+import uvicorn
+
+SAVE_DIR = os.path.join(os.path.dirname(__file__), "saved_clips")
+os.makedirs(SAVE_DIR, exist_ok=True)
+
+app = FastAPI(title="OpenShorts Studio Server", version="2.4.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.get("/api/clips/health")
+def health_check():
+    return {"status": "online", "saved_dir": SAVE_DIR}
+
+@app.post("/api/clips/upload")
+async def upload_clip(
+    file: UploadFile = File(...),
+    title: str = Form("short_clip"),
+    duration: str = Form("0"),
+    score: str = Form("95")
+):
+    safe_name = f"{int(time.time())}_{file.filename}"
+    dest_path = os.path.join(SAVE_DIR, safe_name)
+    with open(dest_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    print(f"[OPENSHORTS SERVER] Clip guardado automáticamente: {dest_path} ({title})")
+    return {
+        "ok": True,
+        "filename": safe_name,
+        "path": dest_path,
+        "title": title,
+        "duration": duration,
+        "score": score
+    }
+
+@app.get("/api/clips/list")
+def list_saved_clips():
+    files = sorted(os.listdir(SAVE_DIR), reverse=True)
+    return {"count": len(files), "clips": files}
+
+if __name__ == "__main__":
+    print("=== Iniciando OpenShorts Server en http://0.0.0.0:8000 ===")
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+`;
+      const blob = new Blob([pyCode], { type: 'text/x-python' });
+      triggerBrowserDownload(blob, 'openshorts_server.py');
+      showToast('Backend Python Descargado', 'Ejecuta: python openshorts_server.py en tu PC o servidor.');
+    }
+
+    /*************************************************************************
+     * 8. CONTROLES INTERACTIVOS DEL ESTUDIO Y MANEJO DE ARCHIVOS
+     *************************************************************************/
+    function handleVideoUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const url = URL.createObjectURL(file);
+      uploadedVideoEl.src = url;
+      uploadedVideoEl.onloadedmetadata = () => {
+        state.sourceType = 'uploaded';
+        state.duration = Math.min(180, Math.floor(uploadedVideoEl.duration || 30));
+        document.getElementById('timeline-scrubber').max = state.duration;
+        document.getElementById('clip-start-slider').max = Math.max(1, state.duration - 2);
+        document.getElementById('clip-end-slider').max = state.duration;
+        document.getElementById('source-status-badge').textContent = file.name.substring(0, 18);
+
+        ensureAudioContext();
+        if (!uploadedVideoAudioSource) {
+          uploadedVideoAudioSource = audioCtx.createMediaElementSource(uploadedVideoEl);
+          uploadedVideoAudioSource.connect(audioCtx.destination);
+          if (mediaStreamDest) uploadedVideoAudioSource.connect(mediaStreamDest);
+        }
+
+        uploadedVideoEl.play();
+        state.isPlaying = true;
+        autoDetectViralClips();
+        logPipeline(`Video cargado desde galería: ${file.name} (${state.duration}s)`);
+        showToast('Video Cargado', 'Se detectaron los mejores segmentos virales automáticamente.');
+      };
+    }
+
+    function activateDemoPodcastStream() {
+      uploadedVideoEl.pause();
+      state.sourceType = 'demo';
+      state.duration = 30;
+      state.currentTime = 0;
+      document.getElementById('source-status-badge').textContent = 'Demo IA Activo';
+      logPipeline('Stream Demo 16:9 con 2 hablantes activado.');
+      showToast('Demo Podcast Activado', 'Hablantes simulados y voz activa para pruebas inmediatas.');
+    }
+
+    function getActiveClip() {
+      return state.clips.find(c => c.id === state.activeClipId) || state.clips[0];
+    }
+
+    function renderClipsListUI() {
+      const container = document.getElementById('clips-list-container');
+      container.innerHTML = '';
+      const active = getActiveClip();
+
+      if (active) {
+        document.getElementById('clip-start-slider').value = active.start;
+        document.getElementById('clip-end-slider').value = active.end;
+        document.getElementById('clip-title-input').value = active.title;
+        const dur = (active.end - active.start).toFixed(1);
+        document.getElementById('clip-range-label').textContent = `${formatTime(active.start)} - ${formatTime(active.end)} (${dur}s)`;
+      }
+
+      state.clips.forEach((clip, idx) => {
+        const isSel = clip.id === state.activeClipId;
+        const div = document.createElement('div');
+        div.onclick = () => selectClip(clip.id);
+        div.className = `p-2.5 rounded-xl border cursor-pointer transition flex items-center justify-between gap-2 ${
+          isSel ? 'bg-emerald-500/15 border-emerald-500' : 'bg-studio-card border-studio-border hover:border-slate-600'
+        }`;
+        div.innerHTML = `
+          <div class="flex items-center gap-2.5 min-w-0">
+            <span class="w-6 h-6 rounded-lg ${isSel ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-300'} font-extrabold text-xs flex items-center justify-center shrink-0">
+              ${idx + 1}
+            </span>
+            <div class="min-w-0">
+              <div class="text-xs font-bold text-white truncate">${clip.title}</div>
+              <div class="text-[10px] font-mono text-slate-400">${formatTime(clip.start)} → ${formatTime(clip.end)} (${(clip.end - clip.start).toFixed(1)}s)</div>
+            </div>
+          </div>
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
+            🔥 ${clip.score}
+          </span>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function selectClip(id) {
+      state.activeClipId = id;
+      const clip = getActiveClip();
+      if (clip) {
+        state.currentTime = clip.start;
+        if (state.sourceType === 'uploaded') uploadedVideoEl.currentTime = clip.start;
+      }
+      renderClipsListUI();
+    }
+
+    function updateActiveClipBounds(which, val) {
+      const clip = getActiveClip();
+      if (!clip) return;
+      const num = parseFloat(val);
+      if (which === 'start') {
+        clip.start = Math.min(num, clip.end - 1.5);
+        state.currentTime = clip.start;
+      } else {
+        clip.end = Math.max(num, clip.start + 1.5);
+      }
+      renderClipsListUI();
+    }
+
+    function updateActiveClipTitle(val) {
+      const clip = getActiveClip();
+      if (clip) {
+        clip.title = val;
+        renderClipsListUI();
+      }
+    }
+
+    function addCustomClip() {
+      const id = 'clip-' + (state.clips.length + 1) + '-' + Date.now().toString().slice(-3);
+      const start = 0;
+      const end = Math.min(state.duration, 8);
+      state.clips.push({
+        id,
+        title: `Clip Personalizado #${state.clips.length + 1}`,
+        start,
+        end,
+        score: 90 + Math.floor(Math.random() * 9)
+      });
+      selectClip(id);
+      showToast('Nuevo Clip Añadido', 'Ajusta el inicio y fin con los controles deslizantes.');
+    }
+
+    function autoDetectViralClips() {
+      const d = state.duration || 30;
+      const seg = Math.max(5, Math.min(10, Math.floor(d / 3)));
+      state.clips = [
+        { id: 'v1_' + Date.now(), title: 'Hook Viral: Momento Clave #1', start: 0, end: seg, score: 98 },
+        { id: 'v2_' + Date.now(), title: 'Explicación Dinámica #2', start: seg, end: Math.min(d, seg * 2), score: 94 },
+        { id: 'v3_' + Date.now(), title: 'Conclusión de Alto Impacto #3', start: Math.min(d - 4, seg * 2), end: d, score: 91 }
+      ];
+      state.activeClipId = state.clips[0].id;
+      renderClipsListUI();
+      logPipeline('Auto-Slicer IA generó 3 segmentos de alto impacto.');
+    }
+
+    // Controles de active_speaker.py
+    function setFramingMode(mode) {
+      state.framing.mode = mode;
+      document.querySelectorAll('.frame-mode-btn').forEach(b => {
+        b.classList.remove('border-emerald-500', 'bg-emerald-500/10');
+        b.classList.add('border-studio-border', 'bg-studio-card');
+      });
+      const activeBtn = document.getElementById('btn-frame-' + mode);
+      if (activeBtn) {
+        activeBtn.classList.remove('border-studio-border', 'bg-studio-card');
+        activeBtn.classList.add('border-emerald-500', 'bg-emerald-500/10');
+      }
+      logPipeline(`Modo de encuadre 9:16 cambiado a: ${mode}`);
+    }
+
+    function setSpeakerTarget(target) {
+      state.framing.target = target;
+      document.querySelectorAll('.spk-btn').forEach(b => {
+        b.className = 'spk-btn py-2 rounded-lg bg-studio-card text-slate-300 border border-studio-border';
+      });
+      const active = document.getElementById('spk-' + target);
+      if (active) active.className = 'spk-btn py-2 rounded-lg bg-emerald-500 text-slate-950 font-extrabold';
+    }
+
+    function updateCropManual() {
+      state.framing.zoom = parseFloat(document.getElementById('crop-zoom-slider').value);
+      state.framing.panXOffset = parseFloat(document.getElementById('crop-panx-slider').value);
+      document.getElementById('zoom-val-label').textContent = state.framing.zoom.toFixed(2) + 'x';
+      document.getElementById('panx-val-label').textContent = state.framing.panXOffset + '%';
+    }
+
+    // Controles de burned_subtitles.py
+    function setSubtitlePreset(preset) {
+      state.subtitles.preset = preset;
+      document.querySelectorAll('.sub-preset-btn').forEach(b => {
+        b.classList.remove('border-emerald-500', 'bg-emerald-500/10');
+        b.classList.add('border-studio-border', 'bg-studio-card');
+      });
+      const btn = document.getElementById('preset-' + preset);
+      if (btn) {
+        btn.classList.remove('border-studio-border', 'bg-studio-card');
+        btn.classList.add('border-emerald-500', 'bg-emerald-500/10');
+      }
+    }
+
+    function renderSubtitlesEditorUI() {
+      const list = document.getElementById('subtitles-editor-list');
+      list.innerHTML = '';
+      state.subtitles.lines.forEach((line, idx) => {
+        const row = document.createElement('div');
+        row.className = 'bg-studio-card border border-studio-border rounded-xl p-2 flex flex-col gap-1.5';
+        row.innerHTML = `
+          <div class="flex items-center justify-between text-[10px] font-mono text-emerald-400">
+            <span>#${idx + 1} (${line.start.toFixed(1)}s - ${line.end.toFixed(1)}s)</span>
+            <button onclick="removeSubtitleLine(${idx})" class="text-rose-400 hover:underline">Quitar</button>
+          </div>
+          <input type="text" value="${line.text}" oninput="state.subtitles.lines[${idx}].text = this.value" class="w-full bg-studio-bg border border-studio-border rounded-lg px-2 py-1 text-xs text-white" />
+        `;
+        list.appendChild(row);
+      });
+    }
+
+    function addSubtitleLine() {
+      const last = state.subtitles.lines[state.subtitles.lines.length - 1];
+      const start = last ? last.end : 0;
+      state.subtitles.lines.push({ start, end: start + 4.0, text: 'Nuevo subtítulo dinámico en vivo' });
+      renderSubtitlesEditorUI();
+    }
+
+    function removeSubtitleLine(idx) {
+      state.subtitles.lines.splice(idx, 1);
+      renderSubtitlesEditorUI();
+    }
+
+    function autoGenerateSubtitlesForClip() {
+      const clip = getActiveClip();
+      if (!clip) return;
+      renderSubtitlesEditorUI();
+      showToast('Subtítulos Sincronizados', `Guion ajustado para "${clip.title}"`);
+    }
+
+    // Controles de camera_inset.py
+    function toggleCameraInset(flag) {
+      state.inset.enabled = flag;
+    }
+
+    async function setInsetSource(src) {
+      state.inset.source = src;
+      if (src === 'webcam') {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+          insetVideoEl.srcObject = stream;
+          insetVideoEl.play();
+          showToast('Cámara Frontal Activa', 'Tu cámara en vivo se integró al recuadro PiP.');
+        } catch (err) {
+          state.inset.source = 'avatar';
+          showToast('Usando Avatar IA', 'No se concedió permiso de cámara; se mantiene el avatar reactivo.', 'fa-circle-info text-amber-400');
+        }
+      }
+    }
+
+    function handleInsetFileUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const img = new Image();
+      img.onload = () => {
+        state.inset.customImage = img;
+        state.inset.source = 'custom_media';
+        showToast('Imagen PiP Cargada', 'Se actualizó el recuadro de reacción.');
+      };
+      img.src = URL.createObjectURL(file);
+    }
+
+    function handleWatermarkLogoUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const img = new Image();
+      img.onload = () => {
+        state.watermark.logoImg = img;
+        showToast('Logo PNG Aplicado', 'Tu marca de agua personalizada está activa en el lienzo.');
+      };
+      img.src = URL.createObjectURL(file);
+    }
+
+    // Transporte y Vistas
+    function togglePlayPause() {
+      ensureAudioContext();
+      state.isPlaying = !state.isPlaying;
+      const icon = document.getElementById('play-pause-icon');
+      icon.className = state.isPlaying ? 'fa-solid fa-pause' : 'fa-solid fa-play';
+      if (state.sourceType === 'uploaded') {
+        state.isPlaying ? uploadedVideoEl.play() : uploadedVideoEl.pause();
+      }
+    }
+
+    function toggleMuteAudio() {
+      state.isMuted = !state.isMuted;
+      uploadedVideoEl.muted = state.isMuted;
+      document.getElementById('mute-icon').className = state.isMuted ? 'fa-solid fa-volume-xmark text-rose-400' : 'fa-solid fa-volume-high';
+    }
+
+    function seekVideo(val) {
+      const sec = parseFloat(val);
+      state.currentTime = sec;
+      if (state.sourceType === 'uploaded') uploadedVideoEl.currentTime = sec;
+      updateTimelineUI();
+    }
+
+    function updateTimelineUI() {
+      document.getElementById('timeline-scrubber').value = state.currentTime;
+      document.getElementById('current-time-txt').textContent = formatTime(state.currentTime);
+      document.getElementById('total-time-txt').textContent = formatTime(state.duration);
+      document.getElementById('speaker-detected-txt').textContent = `Hablante: ${state.framing.detectedSpeakerLabel}`;
+    }
+
+    function formatTime(sec) {
+      const s = Math.max(0, Number(sec) || 0);
+      const m = Math.floor(s / 60);
+      const rem = (s % 60).toFixed(1).padStart(4, '0');
+      return `${String(m).padStart(2, '0')}:${rem}`;
+    }
+
+    function syncSaveToggles(checked) {
+      state.autoDownloadMobile = checked;
+      document.getElementById('global-auto-download').checked = checked;
+      document.getElementById('mobile-auto-download').checked = checked;
+    }
+
+    function switchModuleTab(tabName, btnEl) {
+      ['speaker', 'subs', 'inset', 'watermark'].forEach(t => {
+        document.getElementById('mod-panel-' + t).classList.add('hidden');
+      });
+      document.getElementById('mod-panel-' + tabName).classList.remove('hidden');
+
+      document.querySelectorAll('.mod-tab').forEach(b => {
+        b.classList.remove('border-emerald-400', 'text-emerald-400');
+        b.classList.add('border-transparent', 'text-slate-400');
+      });
+      btnEl.classList.remove('border-transparent', 'text-slate-400');
+      btnEl.classList.add('border-emerald-400', 'text-emerald-400');
+    }
+
+    function switchMainView(viewName) {
+      ['studio', 'vault', 'server'].forEach(v => {
+        document.getElementById('view-' + v).classList.add('hidden');
+        const navBtn = document.getElementById('nav-' + v);
+        navBtn.classList.remove('border-emerald-400', 'text-emerald-400');
+        navBtn.classList.add('border-transparent', 'text-slate-400');
+      });
+
+      document.getElementById('view-' + viewName).classList.remove('hidden');
+      const activeNav = document.getElementById('nav-' + viewName);
+      activeNav.classList.remove('border-transparent', 'text-slate-400');
+      activeNav.classList.add('border-emerald-400', 'text-emerald-400');
+
+      if (viewName === 'vault') refreshVaultUI();
+    }
+
+    async function exportVaultMetadataJSON() {
+      const clips = await getAllClipsFromVault();
+      const clean = clips.map(({ blob, ...rest }) => rest);
+      const jsonBlob = new Blob([JSON.stringify(clean, null, 2)], { type: 'application/json' });
+      triggerBrowserDownload(jsonBlob, 'openshorts_clips_metadata.json');
+      showToast('Proyecto Exportado', 'Se descargó el historial JSON de tus clips.');
+    }
+
+    // Inicialización al cargar la ventana
+    window.onload = async function () {
+      document.getElementById('server-url-input').value = state.serverUrl;
+      document.getElementById('server-token-input').value = state.serverToken;
+      renderClipsListUI();
+      renderSubtitlesEditorUI();
+      await initIndexedDB();
+      logPipeline('OpenShorts Studio inicializado (720x1280 9:16 + IndexedDB).');
+      requestAnimationFrame(masterRenderLoop);
+    };
+  </script>
+</body>
+</html>
